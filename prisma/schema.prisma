@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Group {
+  groupId         String    @id @default(uuid())
+  name            String    @unique
+  groupPassword   String
+  imageUrl        String?
+  isPublic        Boolean   @default(false)
+  introduction    String?
+  groupLikeCount  BigInt    @default(0)
+  postCount       BigInt    @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  posts           Post[]
+  comments        Comment[]
+}
+
+model Post {
+  postId          String    @id @default(uuid())
+  groupId         String
+  nickname        String
+  title           String
+  content         String
+  imageUrl        String?
+  postPassword    String
+  location        String?
+  moment          DateTime?
+  isPublic        Boolean   @default(false)
+  likeCount       BigInt    @default(0)
+  commentCount    BigInt    @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  group           Group     @relation(fields: [groupId], references: [groupId])
+  comments        Comment[]
+  postTags        PostTag[]
+
+  @@index([groupId])
+}
+
+model Comment {
+  commentId       String    @id @default(uuid())
+  postId          String
+  groupId         String
+  nickname        String
+  content         String
+  commentPassword String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  post            Post      @relation(fields: [postId], references: [postId])
+  group           Group     @relation(fields: [groupId], references: [groupId])
+
+  @@index([postId])
+  @@index([groupId])
+}
+
+model PostTag {
+  postTagId       String    @id @default(uuid())
+  postId          String
+  tagId           String
+  createdAt       DateTime  @default(now())
+
+  post            Post      @relation(fields: [postId], references: [postId])
+  tag             Tag       @relation(fields: [tagId], references: [tagId])
+
+  @@index([postId])
+  @@index([tagId])
+}
+
+model Tag {
+  tagId           String    @id @default(uuid())
+  content         String    @unique
+  createdAt       DateTime  @default(now())
+
+  postTags        PostTag[]
+}
