@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "codeit boost mini project \"조각집\" backend",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
