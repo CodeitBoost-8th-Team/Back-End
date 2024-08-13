@@ -1,9 +1,16 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import postRouter from './routes/postRoutes.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
+
+app.use(express.json());
+app.use('/posts', postRouter);
 
 // 기본 라우트
 app.get('/', (req, res) => {
