@@ -30,7 +30,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // 이미지 업로드 처리
-router.post('/image', upload.single('image'), (req, res) => {
+router.post('/', upload.single('image'), (req, res) => {
   try {
     const file = req.file;
     if (!file) {
@@ -40,7 +40,7 @@ router.post('/image', upload.single('image'), (req, res) => {
     // 이미지 URL 생성
     const imageUrl = `/uploads/${file.filename}`;
 
-    res.status(201).json({ imageUrl });
+    res.status(200).json({ imageUrl });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '서버 에러가 발생했습니다.' });
