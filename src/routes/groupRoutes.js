@@ -4,6 +4,17 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
+// bigInt 처리 미들웨어 추가
+router.use((req, res, next) => {
+    res.json = (data) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify(data, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+        ));
+    };
+    next();
+});
+
 // 그룹 등록
 router.post('/', async (req, res) => {
   try {

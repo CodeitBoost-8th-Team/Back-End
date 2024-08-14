@@ -22,6 +22,18 @@ app.use('/posts', postRouter);
 app.use('/groups', groupRouter); // 그룹 라우트 사용
 app.use('/api', imageRouter); // 이미지 라우트 사용
 
+// bigInt 처리 미들웨어 추가
+app.use((req, res, next) => {
+    res.json = (data) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify(data, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+        ));
+    };
+    next();
+});
+
+
 // 기본 라우트
 app.get('/', (req, res) => {
     res.send('Hello World!');
