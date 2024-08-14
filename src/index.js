@@ -11,18 +11,17 @@ const app = express();
 const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
-app.use(express.json());
+app.use(express.json());  // JSON 형식의 요청을 처리하는 미들웨어
 
 // 정적 파일 서비스 설정
 app.use('/uploads', express.static('uploads'));
 
-
 // 라우트 설정
-app.use('/posts', postRouter);
-app.use('/groups', groupRouter); // 그룹 라우트 사용
-app.use('/api', imageRouter); // 이미지 라우트 사용
+app.use('/api/posts', postRouter);       // Post 관련 경로
+app.use('/api/groups', groupRouter);     // Group 관련 경로
+app.use('/api/image', imageRouter);      // Image 관련 경로
 
-// bigInt 처리 미들웨어 추가
+// BigInt 처리 미들웨어 추가
 app.use((req, res, next) => {
     res.json = (data) => {
         res.setHeader('Content-Type', 'application/json');
@@ -33,7 +32,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
 // 기본 라우트
 app.get('/', (req, res) => {
     res.send('Hello World!');
@@ -41,7 +39,7 @@ app.get('/', (req, res) => {
 
 // DB 테스트 라우트
 app.get('/test-db', async (req, res) => {
-    try{
+    try {
         const newGroup = await prisma.group.create({
             data: {
                 name: 'Sample Grouphahaha',
@@ -52,13 +50,12 @@ app.get('/test-db', async (req, res) => {
 
         const allGroups = await prisma.group.findMany();
 
-        // JSON.stringify에서 BigInt를 처리
         res.setHeader('Content-Type', 'application/json');
         res.send(JSON.stringify({newGroup, allGroups}, (key, value) => 
             typeof value === 'bigint' ? value.toString() : value
         ));
 
-    } catch(e){
+    } catch(e) {
         res.status(500).json({ error: e.message });
     }
 });
