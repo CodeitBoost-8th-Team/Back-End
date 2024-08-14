@@ -62,8 +62,13 @@ router.get('/', async (req, res) => {
 
     const where = {
       AND: [
-        keyword ? { name: { contains: keyword } } : {},
-        isPublic !== undefined ? { isPublic: Boolean(isPublic) } : {},
+        keyword ? {
+          OR: [
+            { name: { contains: keyword } },
+            { introduction: { contains: keyword } }
+          ]
+        } : {},
+        isPublic === 'true' || isPublic === 'false' ? { isPublic: isPublic === 'true' } : {},
       ],
     };
 
@@ -91,18 +96,24 @@ router.get('/', async (req, res) => {
 });
 
 // 그룹 상세 정보 조회
-router.get('/:id', async (req, res) => {
+router.get('/:groupId', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { groupId } = req.params;
+    // 그룹 정보를 조회
     const group = await prisma.group.findUnique({
-      where: { groupId: id },
+      where: { groupId },
     });
 
-    if (group) {
-      res.status(200).json(group);
-    } else {
-      res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+    // 그룹이 존재하는지 확인
+    if (!group) {
+      return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
     }
+    // 그룹이 비공개인 경우
+    if (group.isPublic === false) {
+      return res.status(403).json({ message: '비공개 그룹입니다!' });
+    }
+    // 그룹이 공개인 경우, 그룹 정보를 반환
+    res.status(200).json(group);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '서버 에러가 발생했습니다.' });
@@ -115,6 +126,19 @@ router.put('/:groupId', async (req, res) => {
     const { groupId } = req.params;
     const { name, groupPassword, imageUrl, isPublic, introduction } = req.body;
 
+    // 그룹 정보 조회
+    const group = await prisma.group.findUnique({
+      where: { groupId },
+    });
+    // 그룹이 존재하지 않는 경우
+    if (!group) {
+      return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+    }
+    // 비밀번호 확인
+    if (group.groupPassword !== groupPassword) {
+      return res.status(401).json({ message: '비밀번호가 틀렸습니다.' });
+    }
+    
     const updatedGroup = await prisma.group.update({
       where: { groupId },
       data: {
@@ -123,7 +147,6 @@ router.put('/:groupId', async (req, res) => {
         imageUrl,
         isPublic: Boolean(isPublic),
         introduction,
-        updatedAt: new Date(),
       },
     });
 
@@ -138,35 +161,49 @@ router.put('/:groupId', async (req, res) => {
 router.delete('/:groupId', async (req, res) => {
   try {
     const { groupId } = req.params;
+    const { groupPassword } = req.body;
 
+    // 그룹 조회
+    const group = await prisma.group.findUnique({
+      where: { groupId },
+      select: { groupPassword: true },
+    });
+    if (!group) {
+      return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+    }
+    if (group.groupPassword !== groupPassword) {
+      return res.status(401).json({ message: '비밀번호가 틀렸습니다.' });
+    }
+
+    // 그룹 삭제
     await prisma.group.delete({
       where: { groupId },
     });
-
-    res.status(204).end();
+    
+    res.status(200).json({ message: '그룹 삭제 성공' });    
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '서버 에러가 발생했습니다.' });
   }
 });
 
-// 그룹 조회 권한 확인
-router.post('/:groupId/nonpublic', async (req, res) => {
+// 그룹 조회 권한 확인 및 비공개그룹 조회
+router.post('/:groupId/private', async (req, res) => {
   try {
     const { groupId } = req.params;
     const { groupPassword } = req.body;
 
     const group = await prisma.group.findUnique({
       where: { groupId },
-      select: { groupPassword: true },
     });
 
-    if (group && group.groupPassword === groupPassword) {
-      res.status(200).json({ message: '비밀번호가 일치합니다.' });
-    } else if (!group) {
+    if (!group) {
       res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+    } else if (group.groupPassword === groupPassword) {
+      // 비공개 그룹의 상세 정보 반환
+      res.status(200).json(group);
     } else {
-      res.status(403).json({ message: '비밀번호가 틀렸습니다.' });
+      res.status(401).json({ message: '비밀번호가 틀렸습니다.' });
     }
   } catch (error) {
     console.error(error);
@@ -178,13 +215,20 @@ router.post('/:groupId/nonpublic', async (req, res) => {
 router.post('/:groupId/like', async (req, res) => {
   try {
     const { groupId } = req.params;
-
-    await prisma.group.update({
+    const group = await prisma.group.findUnique({
       where: { groupId },
-      data: { groupLikeCount: { increment: 1 } },
     });
 
-    res.status(200).json({ message: '그룹에 공감했습니다.' });
+    if (!group) {
+      res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+    } else {
+      await prisma.group.update({
+        where: { groupId },
+        data: { groupLikeCount: { increment: 1 } },
+      });
+  
+      res.status(200).json({ message: '그룹에 공감했습니다.' });
+    }    
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '서버 에러가 발생했습니다.' });
@@ -197,11 +241,11 @@ router.get('/:groupId/is-public', async (req, res) => {
     const { groupId } = req.params;
     const group = await prisma.group.findUnique({
       where: { groupId },
-      select: { isPublic: true },
+      select: { groupId: true, isPublic: true },
     });
 
     if (group) {
-      res.status(200).json({ isPublic: group.isPublic });
+      res.status(200).json({ groupId: group.groupId, isPublic: group.isPublic });
     } else {
       res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
     }
