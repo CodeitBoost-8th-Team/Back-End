@@ -1,6 +1,8 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import postRouter from './routes/postRoutes.js';
+import groupRouter from './routes/groupRoutes.js'; // 그룹 라우트 추가
+import imageRouter from './routes/image.js'; // 이미지 라우트 추가
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,7 +12,15 @@ const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
 app.use(express.json());
+
+// 정적 파일 서비스 설정
+app.use('/uploads', express.static('uploads'));
+
+
+// 라우트 설정
 app.use('/posts', postRouter);
+app.use('/groups', groupRouter); // 그룹 라우트 사용
+app.use('/api', imageRouter); // 이미지 라우트 사용
 
 // 기본 라우트
 app.get('/', (req, res) => {
