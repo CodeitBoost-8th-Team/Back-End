@@ -70,4 +70,83 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
     });
 }));
 
+// 게시글 목록 조회
+router.get('/:groupId/posts', asyncHandler(async (req, res) => {
+    const { groupId } = req.params;
+    const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublic } = req.query;
+    const offset = (page - 1) * pageSize;
+
+    // 정렬 기준 설정
+    let orderBy;
+    switch (sortBy) {
+        case 'mostCommented':
+            orderBy = { commentCount: 'desc' };
+            break;
+        case 'mostLiked':
+            orderBy = { likeCount: 'desc' };
+            break;
+        case 'latest':
+        default:
+            orderBy = { createdAt: 'desc' };
+            break;
+    }
+
+    // 필터 조건 설정
+    const where = {
+        groupId,
+        AND: [
+            keyword ? {
+                OR: [
+                    { title: { contains: keyword } },
+                    { content: { contains: keyword } },
+                ]
+            } : {},
+            isPublic !== undefined ? { isPublic: isPublic === 'true' } : {},
+        ],
+    };
+
+    // 게시글 목록 조회
+    const posts = await prisma.post.findMany({
+        where,
+        orderBy,
+        skip: parseInt(offset),
+        take: parseInt(pageSize),
+        include: {
+            postTags: {
+                include: {
+                    tag: true,
+                }
+            }
+        }
+    });
+
+    // 전체 게시글 수 조회
+    const totalItems = await prisma.post.count({ where });
+
+    // 태그 추출 및 응답 데이터 구성
+    const data = posts.map(post => ({
+        id: post.postId,
+        nickname: post.nickname,
+        title: post.title,
+        imageUrl: post.imageUrl,
+        tags: post.postTags.map(pt => pt.tag.content),
+        location: post.location,
+        moment: post.moment,
+        isPublic: post.isPublic,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+    }));
+
+    const response = {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalItems / pageSize),
+        totalItemCount: totalItems,
+        data,
+    };
+
+    res.status(200).json(response);
+}));
+
 export default router;
