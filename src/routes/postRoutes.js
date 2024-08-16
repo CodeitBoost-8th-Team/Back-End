@@ -291,4 +291,55 @@ router.get('/:postId', asyncHandler(async (req, res) => {
     res.status(200).json(responseData);
 }));
 
+// 게시글 조회 권한 확인 및 비공개 그룹의 게시글 상세 조회
+router.post('/:postId/private', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const { groupPassword } = req.body;
+
+    // 게시글 조회
+    const post = await prisma.post.findUnique({
+        where: { postId },
+        include: {
+            group: true, // 그룹 정보 포함
+            postTags: {
+                include: {
+                    tag: true,
+                },
+            },
+        },
+    });
+
+    if (!post) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    // 비공개 그룹인지 확인
+    if (!post.group.isPublic) {
+        // 그룹 비밀번호 확인
+        if (post.group.groupPassword !== groupPassword) {
+            return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
+        }
+    }
+
+    // 응답 데이터 구성
+    const responseData = {
+        id: post.postId,
+        groupId: post.groupId,
+        nickname: post.nickname,
+        title: post.title,
+        content: post.content,
+        imageUrl: post.imageUrl,
+        tags: post.postTags.map(pt => pt.tag.content),
+        location: post.location,
+        moment: post.moment,
+        isPublic: post.isPublic,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+    };
+
+    res.status(200).json(responseData);
+}));
+
 export default router;
