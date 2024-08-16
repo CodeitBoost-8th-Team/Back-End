@@ -274,6 +274,10 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
       return res.status(401).json({ message: '비밀번호가 틀렸습니다.' });
   }
 
+  if(isPublicPost != group.isPublic){
+    return res.status(401).json({message: "공개 그룹은 공개 포스트만, 비공개 그룹은 비공개 포스트만 작성 가능합니다."});
+  }
+
   const postTags = tags.length > 0 ? {
     create: tags.map(tag => ({
         tag: {
