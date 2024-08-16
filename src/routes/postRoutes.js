@@ -149,4 +149,77 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
     res.status(200).json(response);
 }));
 
+// 게시글 수정
+router.put('/:postId', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const { nickname, title, content, postPassword, imageUrl, tags, location, moment, isPublic } = req.body;
+
+    // 게시글 조회
+    const post = await prisma.post.findUnique({
+        where: { postId },
+        include: { postTags: { include: { tag: true } } } // 기존 태그 포함
+    });
+
+    if (!post) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    // 비밀번호 확인
+    if (post.postPassword !== postPassword) {
+        return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
+    }
+
+    // 태그 처리
+    const updatedTags = tags.map(tag => ({
+        tag: {
+            connectOrCreate: {
+                where: { content: tag },
+                create: { content: tag },
+            },
+        }
+    }));
+
+    // 게시글 업데이트
+    const updatedPost = await prisma.post.update({
+        where: { postId },
+        data: {
+            nickname,
+            title,
+            content,
+            imageUrl,
+            location,
+            moment: moment ? new Date(moment) : null,
+            isPublic: Boolean(isPublic),
+            postTags: {
+                deleteMany: {}, // 기존 태그 모두 삭제
+                create: updatedTags // 새로운 태그 추가
+            },
+        },
+        include: {
+            postTags: {
+                include: {
+                    tag: true
+                }
+            }
+        }
+    });
+
+    res.status(200).json({
+        id: updatedPost.postId,
+        groupId: updatedPost.groupId,
+        nickname: updatedPost.nickname,
+        title: updatedPost.title,
+        content: updatedPost.content,
+        imageUrl: updatedPost.imageUrl,
+        tags: updatedPost.postTags.map(pt => pt.tag.content),
+        location: updatedPost.location,
+        moment: updatedPost.moment,
+        isPublic: updatedPost.isPublic,
+        likeCount: updatedPost.likeCount,
+        commentCount: updatedPost.commentCount,
+        createdAt: updatedPost.createdAt,
+        updatedAt: updatedPost.updatedAt,
+    });
+}));
+
 export default router;
