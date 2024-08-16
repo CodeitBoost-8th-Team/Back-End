@@ -249,4 +249,46 @@ router.delete('/:postId', asyncHandler(async (req, res) => {
     res.status(200).json({ message: '게시글 삭제 성공' });
 }));
 
+
+// 게시글 상세 정보 조회
+router.get('/:postId', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+
+    // 게시글 조회
+    const post = await prisma.post.findUnique({
+        where: { postId },
+        include: {
+            postTags: {
+                include: {
+                    tag: true,
+                },
+            },
+        },
+    });
+
+    if (!post) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    // 응답 데이터 구성
+    const responseData = {
+        id: post.postId,
+        groupId: post.groupId,
+        nickname: post.nickname,
+        title: post.title,
+        content: post.content,
+        imageUrl: post.imageUrl,
+        tags: post.postTags.map(pt => pt.tag.content),
+        location: post.location,
+        moment: post.moment,
+        isPublic: post.isPublic,
+        likeCount: post.likeCount,
+        commentCount: post.commentCount,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+    };
+
+    res.status(200).json(responseData);
+}));
+
 export default router;
