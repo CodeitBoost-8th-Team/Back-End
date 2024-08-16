@@ -342,4 +342,26 @@ router.post('/:postId/private', asyncHandler(async (req, res) => {
     res.status(200).json(responseData);
 }));
 
+// 게시글 공감하기
+router.post('/:postId/like', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+
+    // 게시글 조회
+    const post = await prisma.post.findUnique({
+        where: { postId },
+    });
+
+    if (!post) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    // 공감 수 증가
+    await prisma.post.update({
+        where: { postId },
+        data: { likeCount: { increment: 1 } },
+    });
+
+    res.status(200).json({ message: '게시글 공감하기 성공' });
+}));
+
 export default router;
