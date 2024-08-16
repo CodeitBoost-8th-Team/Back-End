@@ -141,6 +141,10 @@ router.get('/:postId', asyncHandler(async (req, res) => {
         return res.status(404).json({ message: '존재하지 않습니다' });
     }
 
+    if(!post.isPublic){
+        return res.status(401).json({message : "비공개 게시글은 다른 라우트에서 비밀번호 입력 후에 조회 가능합니다."});
+    }
+
     // 응답 데이터 구성
     const responseData = {
         id: post.postId,
