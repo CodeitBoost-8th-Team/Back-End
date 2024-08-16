@@ -108,6 +108,10 @@ router.delete('/:postId', asyncHandler(async (req, res) => {
         return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
     }
 
+    // 게시글과 연결된 데이터 삭제 먼저 해줘야 함
+    await prisma.comment.deleteMany({ where: { postId } });
+    await prisma.postTag.deleteMany({ where: { postId } });
+
     // 게시글 삭제
     await prisma.post.delete({
         where: { postId },
