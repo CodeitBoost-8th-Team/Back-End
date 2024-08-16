@@ -309,6 +309,14 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
       },
   });
 
+  // 포스트 등록 후, 그룹의 postCount를 증가시킵니다.
+  await prisma.group.update({
+    where: { groupId },
+    data: {
+        postCount: { increment: 1 }, // postCount를 1 증가시킵니다.
+    },
+  });
+
   res.status(201).json({
       id: newPost.postId,
       groupId: newPost.groupId,

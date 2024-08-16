@@ -97,6 +97,7 @@ router.delete('/:postId', asyncHandler(async (req, res) => {
     // 게시글 조회
     const post = await prisma.post.findUnique({
         where: { postId },
+        select: { postPassword: true, groupId: true}, // groupId를 함께 조회
     });
 
     if (!post) {
@@ -115,6 +116,14 @@ router.delete('/:postId', asyncHandler(async (req, res) => {
     // 게시글 삭제
     await prisma.post.delete({
         where: { postId },
+    });
+
+    // 그룹의 postCount 감소
+    await prisma.group.update({
+        where: { groupId: post.groupId },
+        data: {
+            postCount: { decrement: 1 },
+        },
     });
 
     res.status(200).json({ message: '게시글 삭제 성공' });
