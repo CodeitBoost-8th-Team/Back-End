@@ -315,7 +315,7 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
       tags: newPost.postTags.map(pt => pt.tag ? pt.tag.content : null).filter(Boolean), // tag가 null이 아닌 경우에만 포함
       location: newPost.location,
       moment: newPost.moment,
-      isPublic: newPost.isPublic,
+      isPublicPost: newPost.isPublic,
       likeCount: newPost.likeCount,
       commentCount: newPost.commentCount,
       createdAt: newPost.createdAt,
@@ -326,13 +326,12 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
 // 게시글 목록 조회
 router.get('/:groupId/posts', asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublic } = req.query;
+  const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublicPost } = req.query;
   const offset = (page - 1) * pageSize;
 
   // 해당 그룹이 존재하지 않으면 에러
   const group = await prisma.group.findUnique({
     where: { groupId },
-    select: { groupId: true, isPublic: true },
   });
   if (!group) {
     return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
@@ -363,7 +362,7 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
                   { content: { contains: keyword } },
               ]
           } : {},
-          isPublic !== undefined ? { isPublic: isPublic === 'true' } : {},
+          isPublicPost !== undefined ? { isPublic: isPublicPost === 'true' } : {},
       ],
   };
 
@@ -394,7 +393,7 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
       tags: post.postTags.map(pt => pt.tag.content),
       location: post.location,
       moment: post.moment,
-      isPublic: post.isPublic,
+      isPublicPost: post.isPublic,
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       createdAt: post.createdAt,

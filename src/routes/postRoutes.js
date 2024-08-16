@@ -19,7 +19,7 @@ router.use((req, res, next) => {
 // 게시글 수정
 router.put('/:postId', asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const { nickname, title, content, postPassword, imageUrl, tags, location, moment, isPublic } = req.body;
+    const { nickname, title, content, postPassword, imageUrl, tags, location, moment, isPublicPost } = req.body;
 
     // 게시글 조회
     const post = await prisma.post.findUnique({
@@ -56,7 +56,7 @@ router.put('/:postId', asyncHandler(async (req, res) => {
             imageUrl,
             location,
             moment: moment ? new Date(moment) : null,
-            isPublic: Boolean(isPublic),
+            isPublic: Boolean(isPublicPost),
             postTags: {
                 deleteMany: {}, // 기존 태그 모두 삭제
                 create: updatedTags // 새로운 태그 추가
@@ -81,7 +81,7 @@ router.put('/:postId', asyncHandler(async (req, res) => {
         tags: updatedPost.postTags.map(pt => pt.tag.content),
         location: updatedPost.location,
         moment: updatedPost.moment,
-        isPublic: updatedPost.isPublic,
+        isPublicPost: updatedPost.isPublic,
         likeCount: updatedPost.likeCount,
         commentCount: updatedPost.commentCount,
         createdAt: updatedPost.createdAt,
@@ -152,7 +152,7 @@ router.get('/:postId', asyncHandler(async (req, res) => {
         tags: post.postTags.map(pt => pt.tag.content),
         location: post.location,
         moment: post.moment,
-        isPublic: post.isPublic,
+        isPublicPost: post.isPublic,
         likeCount: post.likeCount,
         commentCount: post.commentCount,
         createdAt: post.createdAt,
@@ -203,7 +203,7 @@ router.post('/:postId/private', asyncHandler(async (req, res) => {
         tags: post.postTags.map(pt => pt.tag.content),
         location: post.location,
         moment: post.moment,
-        isPublic: post.isPublic,
+        isPublicPost: post.isPublic,
         likeCount: post.likeCount,
         commentCount: post.commentCount,
         createdAt: post.createdAt,
@@ -252,7 +252,7 @@ router.get('/:postId/is-public', asyncHandler(async (req, res) => {
     // 응답 데이터 구성
     const responseData = {
         id: post.postId,
-        isPublic: post.isPublic,
+        isPublicPost: post.isPublic,
     };
 
     res.status(200).json(responseData);
