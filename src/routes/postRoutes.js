@@ -184,12 +184,9 @@ router.post('/:postId/private', asyncHandler(async (req, res) => {
         return res.status(404).json({ message: '존재하지 않습니다' });
     }
 
-    // 비공개 그룹인지 확인
-    if (!post.group.isPublic) {
-        // 그룹 비밀번호 확인
-        if (post.group.groupPassword !== groupPassword) {
-            return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
-        }
+    // 그룹 비밀번호 확인
+    if (post.group.groupPassword !== groupPassword) {
+        return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
     }
 
     // 응답 데이터 구성
