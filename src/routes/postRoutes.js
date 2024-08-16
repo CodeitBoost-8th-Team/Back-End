@@ -222,4 +222,31 @@ router.put('/:postId', asyncHandler(async (req, res) => {
     });
 }));
 
+// 게시글 삭제
+router.delete('/:postId', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const { postPassword } = req.body;
+
+    // 게시글 조회
+    const post = await prisma.post.findUnique({
+        where: { postId },
+    });
+
+    if (!post) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    // 비밀번호 확인
+    if (post.postPassword !== postPassword) {
+        return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
+    }
+
+    // 게시글 삭제
+    await prisma.post.delete({
+        where: { postId },
+    });
+
+    res.status(200).json({ message: '게시글 삭제 성공' });
+}));
+
 export default router;
