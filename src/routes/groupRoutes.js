@@ -329,6 +329,15 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
   const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublic } = req.query;
   const offset = (page - 1) * pageSize;
 
+  // 해당 그룹이 존재하지 않으면 에러
+  const group = await prisma.group.findUnique({
+    where: { groupId },
+    select: { groupId: true, isPublic: true },
+  });
+  if (!group) {
+    return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+  }
+
   // 정렬 기준 설정
   let orderBy;
   switch (sortBy) {
