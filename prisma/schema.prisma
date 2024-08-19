@@ -39,7 +39,6 @@ model Post {
   postPassword    String
   location        String?
   moment          DateTime?
-  isPublic        Boolean   @default(false)
   likeCount       BigInt    @default(0)
   commentCount    BigInt    @default(0)
   createdAt       DateTime  @default(now())

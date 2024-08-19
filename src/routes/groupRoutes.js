@@ -146,7 +146,7 @@ router.put('/:groupId', async (req, res) => {
         name,
         groupPassword,
         imageUrl,
-        isPublic: Boolean(isPublic),
+        isPublic: isPublic !== undefined ? Boolean(isPublic) : group.isPublic,
         introduction,
       },
     });
@@ -259,7 +259,7 @@ router.get('/:groupId/is-public', async (req, res) => {
 // 게시글 등록
 router.post('/:groupId/posts', asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { nickname, title, content, postPassword, groupPassword, imageUrl, tags = [], location, moment, isPublicPost } = req.body;
+  const { nickname, title, content, postPassword, groupPassword, imageUrl, tags = [], location, moment } = req.body;
 
   // 그룹 비밀번호 확인
   const group = await prisma.group.findUnique({
@@ -272,10 +272,6 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
 
   if (group.groupPassword !== groupPassword) {
       return res.status(401).json({ message: '비밀번호가 틀렸습니다.' });
-  }
-
-  if(isPublicPost != group.isPublic){
-    return res.status(401).json({message: "공개 그룹은 공개 포스트만, 비공개 그룹은 비공개 포스트만 작성 가능합니다."});
   }
 
   const postTags = tags.length > 0 ? {
@@ -299,7 +295,6 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
           imageUrl,
           location,
           moment: moment ? new Date(moment) : null,
-          isPublic: Boolean(isPublicPost),
           likeCount: 0,
           commentCount: 0,
           postTags
@@ -327,7 +322,6 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
       tags: newPost.postTags.map(pt => pt.tag ? pt.tag.content : null).filter(Boolean), // tag가 null이 아닌 경우에만 포함
       location: newPost.location,
       moment: newPost.moment,
-      isPublicPost: newPost.isPublic,
       likeCount: newPost.likeCount,
       commentCount: newPost.commentCount,
       createdAt: newPost.createdAt,
@@ -338,7 +332,7 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
 // 공개 그룹 게시글 목록 조회
 router.get('/:groupId/posts', asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublicPost } = req.query;
+  const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '' } = req.query;
   const offset = (page - 1) * pageSize;
 
   // 해당 그룹이 존재하지 않으면 에러
@@ -378,7 +372,6 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
                   { content: { contains: keyword } },
               ]
           } : {},
-          isPublicPost !== undefined ? { isPublic: isPublicPost === 'true' } : {},
       ],
   };
 
@@ -409,7 +402,6 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
       tags: post.postTags.map(pt => pt.tag.content),
       location: post.location,
       moment: post.moment,
-      isPublicPost: post.isPublic,
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       createdAt: post.createdAt,
@@ -476,7 +468,6 @@ router.post('/:groupId/posts/private', asyncHandler(async (req, res) => {
                   { content: { contains: keyword } },
               ]
           } : {},
-          isPublicPost !== undefined ? { isPublic: isPublicPost === 'true' } : {},
       ],
   };
 
@@ -507,7 +498,6 @@ router.post('/:groupId/posts/private', asyncHandler(async (req, res) => {
       tags: post.postTags.map(pt => pt.tag.content),
       location: post.location,
       moment: post.moment,
-      isPublicPost: post.isPublic,
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       createdAt: post.createdAt,

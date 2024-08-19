@@ -19,14 +19,14 @@ router.use((req, res, next) => {
 // 게시글 수정
 router.put('/:postId', asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const { nickname, title, content, postPassword, imageUrl, tags, location, moment, isPublicPost } = req.body;
+    const { nickname, title, content, postPassword, imageUrl, tags, location, moment } = req.body;
 
     // 게시글 조회
     const post = await prisma.post.findUnique({
         where: { postId },
         include: { 
             group: true,
-            postTags: { include: { tag: true } } } // 기존 태그 포함
+            postTags: { include: { tag: true } } }, // 기존 태그 포함
     });
 
     if (!post) {
@@ -45,8 +45,6 @@ router.put('/:postId', asyncHandler(async (req, res) => {
     if (!group) {
         return res.status(404).json({ message: '존재하지 않습니다' });
     }
-
-    // isPublicPost = group.isPublic; // 수정불가
 
     // 태그 처리
     const updatedTags = tags.map(tag => ({
@@ -68,7 +66,6 @@ router.put('/:postId', asyncHandler(async (req, res) => {
             imageUrl,
             location,
             moment: moment ? new Date(moment) : null,
-            isPublic: Boolean(group.isPublic),
             postTags: {
                 deleteMany: {}, // 기존 태그 모두 삭제
                 create: updatedTags // 새로운 태그 추가
@@ -93,7 +90,6 @@ router.put('/:postId', asyncHandler(async (req, res) => {
         tags: updatedPost.postTags.map(pt => pt.tag.content),
         location: updatedPost.location,
         moment: updatedPost.moment,
-        isPublicPost: updatedPost.isPublic,
         likeCount: updatedPost.likeCount,
         commentCount: updatedPost.commentCount,
         createdAt: updatedPost.createdAt,
@@ -150,6 +146,7 @@ router.get('/:postId', asyncHandler(async (req, res) => {
     const post = await prisma.post.findUnique({
         where: { postId },
         include: {
+            group: true,
             postTags: {
                 include: {
                     tag: true,
@@ -162,7 +159,15 @@ router.get('/:postId', asyncHandler(async (req, res) => {
         return res.status(404).json({ message: '존재하지 않습니다' });
     }
 
-    if(!post.isPublic){
+    const group = await prisma.group.findUnique({
+      where: { groupId: post.groupId },
+    });
+
+    if (!group) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    if(!group.isPublic){
         return res.status(401).json({message : "비공개 게시글은 다른 라우트에서 비밀번호 입력 후에 조회 가능합니다."});
     }
 
@@ -177,7 +182,6 @@ router.get('/:postId', asyncHandler(async (req, res) => {
         tags: post.postTags.map(pt => pt.tag.content),
         location: post.location,
         moment: post.moment,
-        isPublicPost: post.isPublic,
         likeCount: post.likeCount,
         commentCount: post.commentCount,
         createdAt: post.createdAt,
@@ -229,7 +233,6 @@ router.post('/:postId/private', asyncHandler(async (req, res) => {
         tags: post.postTags.map(pt => pt.tag.content),
         location: post.location,
         moment: post.moment,
-        isPublicPost: post.isPublic,
         likeCount: post.likeCount,
         commentCount: post.commentCount,
         createdAt: post.createdAt,
@@ -246,13 +249,16 @@ router.post('/:postId/like', asyncHandler(async (req, res) => {
     // 게시글 조회
     const post = await prisma.post.findUnique({
         where: { postId },
+        include: {
+          group: true,
+        }
     });
 
     if (!post) {
         return res.status(404).json({ message: '존재하지 않습니다' });
     }
 
-    if(!post.isPublic){
+    if(!post.group.isPublic){
         return res.status(401).json({message : "비공개 게시글은 다른 라우트에서 비밀번호 입력 후에 조회 가능합니다."});
     }
 
@@ -313,8 +319,15 @@ router.get('/:postId/is-public', asyncHandler(async (req, res) => {
     // 게시글 조회
     const post = await prisma.post.findUnique({
         where: { postId },
-        select: { postId: true, isPublic: true },
-    });
+        select: {
+          postId: true,
+          group: {
+              select: {
+                  isPublic: true
+              }
+          }
+      }
+  });
 
     if (!post) {
         return res.status(404).json({ message: '존재하지 않습니다' });
@@ -323,7 +336,7 @@ router.get('/:postId/is-public', asyncHandler(async (req, res) => {
     // 응답 데이터 구성
     const responseData = {
         id: post.postId,
-        isPublicPost: post.isPublic,
+        isPublic: post.group.isPublic,
     };
 
     res.status(200).json(responseData);
