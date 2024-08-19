@@ -317,4 +317,44 @@ router.get('/:postId/is-public', asyncHandler(async (req, res) => {
     res.status(200).json(responseData);
 }));
 
+
+// 댓글 등록
+router.post('/:postId/comments', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const { nickname, content, commentPassword } = req.body; // groupPassword, isPublicPost
+  
+    const post = await prisma.post.findUnique({
+        where: { postId },
+    });
+  
+    if (!post) {
+        return res.status(404).json({ message: '추억(포스트)을 찾을 수 없습니다.' });
+    }
+  
+    const newComment = await prisma.comment.create({
+        data: {
+            postId,
+            nickname,
+            content,
+            commentPassword,
+        },
+    });
+  
+    // 댓글 등록 후, 포스트의 commentCount를 증가시킵니다.
+    await prisma.post.update({
+      where: { postId },
+      data: {
+          commentCount: { increment: 1 }, // postCount를 1 증가시킵니다.
+      },
+    });
+  
+    res.status(200).json({ // postId는 안 줘도 됨, 정보로 받은게 postId임
+        id: newComment.commentId,
+        nickname: newComment.nickname,
+        content: newComment.content,
+        createdAt: newComment.createdAt,
+        updatedAt: newComment.updatedAt,
+    });
+  }));
+
 export default router;
