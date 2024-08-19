@@ -317,7 +317,7 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
     },
   });
 
-  res.status(201).json({
+  res.status(200).json({
       id: newPost.postId,
       groupId: newPost.groupId,
       nickname: newPost.nickname,
