@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 const prisma = new PrismaClient();
 
 app.use(express.json());  // JSON 형식의 요청을 처리하는 미들웨어
@@ -17,6 +17,7 @@ app.use(express.json());  // JSON 형식의 요청을 처리하는 미들웨어
 app.use('/uploads', express.static('uploads'));
 
 // 라우트 설정
+app.use('/api/comments', postRouter);       // Comment 관련 경로
 app.use('/api/posts', postRouter);       // Post 관련 경로
 app.use('/api/groups', groupRouter);     // Group 관련 경로
 app.use('/api/image', imageRouter);      // Image 관련 경로
