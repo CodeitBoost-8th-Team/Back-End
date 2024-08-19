@@ -335,7 +335,7 @@ router.post('/:groupId/posts', asyncHandler(async (req, res) => {
   });
 }));
 
-// 게시글 목록 조회
+// 공개 그룹 게시글 목록 조회
 router.get('/:groupId/posts', asyncHandler(async (req, res) => {
   const { groupId } = req.params;
   const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublicPost } = req.query;
@@ -347,6 +347,108 @@ router.get('/:groupId/posts', asyncHandler(async (req, res) => {
   });
   if (!group) {
     return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+  }
+
+  if(!group.isPublic){
+    return res.status(401).json({message: "이 라우트에서는 공개 그룹의 게시글 목록만 조회할 수 있습니다."});
+  }
+
+  // 정렬 기준 설정
+  let orderBy;
+  switch (sortBy) {
+      case 'mostCommented':
+          orderBy = { commentCount: 'desc' };
+          break;
+      case 'mostLiked':
+          orderBy = { likeCount: 'desc' };
+          break;
+      case 'latest':
+      default:
+          orderBy = { createdAt: 'desc' };
+          break;
+  }
+
+  // 필터 조건 설정
+  const where = {
+      groupId,
+      AND: [
+          keyword ? {
+              OR: [
+                  { title: { contains: keyword } },
+                  { content: { contains: keyword } },
+              ]
+          } : {},
+          isPublicPost !== undefined ? { isPublic: isPublicPost === 'true' } : {},
+      ],
+  };
+
+  // 게시글 목록 조회
+  const posts = await prisma.post.findMany({
+      where,
+      orderBy,
+      skip: parseInt(offset),
+      take: parseInt(pageSize),
+      include: {
+          postTags: {
+              include: {
+                  tag: true,
+              }
+          }
+      }
+  });
+
+  // 전체 게시글 수 조회
+  const totalItems = await prisma.post.count({ where });
+
+  // 태그 추출 및 응답 데이터 구성
+  const data = posts.map(post => ({
+      id: post.postId,
+      nickname: post.nickname,
+      title: post.title,
+      imageUrl: post.imageUrl,
+      tags: post.postTags.map(pt => pt.tag.content),
+      location: post.location,
+      moment: post.moment,
+      isPublicPost: post.isPublic,
+      likeCount: post.likeCount,
+      commentCount: post.commentCount,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+  }));
+
+  const response = {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalItems / pageSize),
+      totalItemCount: totalItems,
+      data,
+  };
+
+  res.status(200).json(response);
+}));
+
+
+// 비공개 그룹 게시글 목록 조회
+router.post('/:groupId/posts/private', asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublicPost } = req.query;
+  const offset = (page - 1) * pageSize;
+  const { groupPassword } = req.body;
+
+  // 해당 그룹이 존재하지 않으면 에러
+  const group = await prisma.group.findUnique({
+    where: { groupId },
+  });
+  if (!group) {
+    return res.status(404).json({ message: '그룹을 찾을 수 없습니다.' });
+  }
+
+  if(group.isPublic){
+    return res.status(401).json({message: "이 라우트에서는 비공개 그룹의 게시글 목록만 조회할 수 있습니다."});
+  }
+
+  // 그룹 비밀번호 확인
+  if (group.groupPassword !== groupPassword) {
+    return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
   }
 
   // 정렬 기준 설정

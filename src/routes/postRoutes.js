@@ -197,6 +197,10 @@ router.post('/:postId/private', asyncHandler(async (req, res) => {
         return res.status(404).json({ message: '존재하지 않습니다' });
     }
 
+    if(post.group.isPublic){
+        return res.status(401).json({message: "이 라우트에서는 비공개 게시글만 조회할 수 있습니다."});
+    }
+
     // 그룹 비밀번호 확인
     if (post.group.groupPassword !== groupPassword) {
         return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
@@ -223,7 +227,7 @@ router.post('/:postId/private', asyncHandler(async (req, res) => {
     res.status(200).json(responseData);
 }));
 
-// 게시글 공감하기
+// 공개그룹 게시글 공감하기
 router.post('/:postId/like', asyncHandler(async (req, res) => {
     const { postId } = req.params;
 
@@ -234,6 +238,51 @@ router.post('/:postId/like', asyncHandler(async (req, res) => {
 
     if (!post) {
         return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    if(!post.isPublic){
+        return res.status(401).json({message : "비공개 게시글은 다른 라우트에서 비밀번호 입력 후에 조회 가능합니다."});
+    }
+
+    // 공감 수 증가
+    await prisma.post.update({
+        where: { postId },
+        data: { likeCount: { increment: 1 } },
+    });
+
+    res.status(200).json({ message: '게시글 공감하기 성공' });
+}));
+
+// 비공개그룹 게시글 공감하기
+router.post('/:postId/like/private', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const { groupPassword } = req.body;
+
+
+    // 게시글 조회
+    const post = await prisma.post.findUnique({
+        where: { postId },
+        include: {
+            group: true, // 그룹 정보 포함
+            postTags: {
+                include: {
+                    tag: true,
+                },
+            },
+        },
+    });
+
+    if (!post) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    if(post.group.isPublic){
+        return res.status(401).json({message: "이 라우트에서는 비공개 포스트만 공감할 수 있습니다."});
+    }
+
+    // 그룹 비밀번호 확인
+    if (post.group.groupPassword !== groupPassword) {
+        return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
     }
 
     // 공감 수 증가
