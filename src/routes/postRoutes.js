@@ -321,7 +321,7 @@ router.get('/:postId/is-public', asyncHandler(async (req, res) => {
 // 댓글 등록
 router.post('/:postId/comments', asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const { nickname, content, commentPassword } = req.body; // groupPassword, isPublicPost
+    const { nickname, content, commentPassword } = req.body;
   
     const post = await prisma.post.findUnique({
         where: { postId },
@@ -355,6 +355,59 @@ router.post('/:postId/comments', asyncHandler(async (req, res) => {
         createdAt: newComment.createdAt,
         updatedAt: newComment.updatedAt,
     });
+  }));
+
+
+  // 댓글 목록 조회
+router.get('/:postId/comments', asyncHandler(async (req, res) => {
+    const { postId } = req.params;
+    const { page = 1, pageSize = 10 } = req.query;
+    const offset = (page - 1) * pageSize;
+  
+    // 해당 그룹이 존재하지 않으면 에러
+    const post = await prisma.post.findUnique({
+      where: { postId },
+    });
+    if (!post) {
+      return res.status(404).json({ message: '추억(포스트)을 찾을 수 없습니다.' });
+    }
+  
+    // 정렬 기준 설정
+    const orderBy = { createdAt: 'desc' };
+  
+    // 필터 조건 설정
+    const where = {
+        postId,
+    };
+  
+    // 댓글 목록 조회
+    const comments = await prisma.comment.findMany({
+        where,
+        orderBy,
+        skip: parseInt(offset),
+        take: parseInt(pageSize)
+    });
+  
+    // 전체 댓글 수 조회
+    const totalItems = await prisma.comment.count({ where });
+  
+    // 응답 데이터 구성
+    const data = comments.map(comment => ({
+        id: comment.commentId,
+        nickname: comment.nickname,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+    }));
+  
+    const response = {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalItems / pageSize),
+        totalItemCount: totalItems,
+        data,
+    };
+  
+    res.status(200).json(response);
   }));
 
 export default router;
