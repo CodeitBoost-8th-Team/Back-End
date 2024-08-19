@@ -24,7 +24,9 @@ router.put('/:postId', asyncHandler(async (req, res) => {
     // 게시글 조회
     const post = await prisma.post.findUnique({
         where: { postId },
-        include: { postTags: { include: { tag: true } } } // 기존 태그 포함
+        include: { 
+            group: true,
+            postTags: { include: { tag: true } } } // 기존 태그 포함
     });
 
     if (!post) {
@@ -35,6 +37,16 @@ router.put('/:postId', asyncHandler(async (req, res) => {
     if (post.postPassword !== postPassword) {
         return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
     }
+
+    const group = await prisma.group.findUnique({
+        where: { groupId: post.groupId },
+    });
+
+    if (!group) {
+        return res.status(404).json({ message: '존재하지 않습니다' });
+    }
+
+    // isPublicPost = group.isPublic; // 수정불가
 
     // 태그 처리
     const updatedTags = tags.map(tag => ({
@@ -56,7 +68,7 @@ router.put('/:postId', asyncHandler(async (req, res) => {
             imageUrl,
             location,
             moment: moment ? new Date(moment) : null,
-            isPublic: Boolean(isPublicPost),
+            isPublic: Boolean(group.isPublic),
             postTags: {
                 deleteMany: {}, // 기존 태그 모두 삭제
                 create: updatedTags // 새로운 태그 추가
