@@ -27,7 +27,6 @@ model Group {
   updatedAt       DateTime  @updatedAt
 
   posts           Post[]
-  comments        Comment[]
 }
 
 model Post {
@@ -56,7 +55,6 @@ model Post {
 model Comment {
   commentId       String    @id @default(uuid())
   postId          String
-  groupId         String
   nickname        String
   content         String
   commentPassword String
@@ -64,10 +62,8 @@ model Comment {
   updatedAt       DateTime  @updatedAt
 
   post            Post      @relation(fields: [postId], references: [postId])
-  group           Group     @relation(fields: [groupId], references: [groupId])
 
   @@index([postId])
-  @@index([groupId])
 }
 
 model PostTag {
