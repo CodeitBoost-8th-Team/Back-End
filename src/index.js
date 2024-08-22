@@ -4,10 +4,16 @@ import postRouter from './routes/postRoutes.js';
 import groupRouter from './routes/groupRoutes.js'; // 그룹 라우트 추가
 import imageRouter from './routes/image.js'; // 이미지 라우트 추가
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
+const corsOptions = {
+  origin: ['http://127.0.0.1:3000'],
+};
+app.use(cors(corsOptions));
+app.use(express.json());
 const port = process.env.PORT || 5000;
 const prisma = new PrismaClient();
 
