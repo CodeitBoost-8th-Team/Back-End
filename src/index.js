@@ -13,7 +13,7 @@ const corsOptions = {
   origin: ['http://127.0.0.1:3000'],
 };
 app.use(cors(corsOptions));
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
 app.use(express.json());  // JSON 형식의 요청을 처리하는 미들웨어
