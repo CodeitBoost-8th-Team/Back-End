@@ -10,7 +10,10 @@ dotenv.config();
 
 const app = express();
 const corsOptions = {
-  origin: ['http://127.0.0.1:3000'],
+  origin: ['http://127.0.0.1:3000',
+    'http://15.164.80.90:80'
+  ],
+  credentials: true, // 쿠키 등을 포함한 요청을 허용하려면 이 옵션을 설정
 };
 app.use(cors(corsOptions));
 const port = process.env.PORT || 3000;
