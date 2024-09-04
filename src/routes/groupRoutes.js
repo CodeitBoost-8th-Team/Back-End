@@ -2,8 +2,35 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import asyncHandler from '../utils/asyncHandler.js';
 
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
 const router = Router();
 const prisma = new PrismaClient();
+
+// __dirname 대체 코드
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 이미지 업로드 디렉토리 설정
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// Multer 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
 
 // bigInt 처리 미들웨어 추가
 router.use((req, res, next) => {
@@ -122,10 +149,11 @@ router.get('/:groupId', async (req, res) => {
 });
 
 // 그룹 수정
-router.put('/:groupId', async (req, res) => {
+router.put('/:groupId', upload.single('imageUrl'), async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { name, groupPassword, imageUrl, isPublic, introduction } = req.body;
+    const { name, groupPassword, isPublic, introduction } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
 
     // 그룹 정보 조회
     const group = await prisma.group.findUnique({
@@ -139,14 +167,14 @@ router.put('/:groupId', async (req, res) => {
     if (group.groupPassword !== groupPassword) {
       return res.status(401).json({ message: '비밀번호가 틀렸습니다.' });
     }
-    
+
     const updatedGroup = await prisma.group.update({
       where: { groupId },
       data: {
         name,
         groupPassword,
-        imageUrl,
-        isPublic: isPublic !== undefined ? Boolean(isPublic) : group.isPublic,
+        imageUrl: imageUrl || group.imageUrl, // 기존 이미지 URL 유지
+        isPublic: isPublic === 'true' ? true : false,
         introduction,
       },
     });
